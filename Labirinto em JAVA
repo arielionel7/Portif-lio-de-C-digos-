@@ -1,0 +1,220 @@
+package ariel10;
+
+import java.util.*;
+
+public class LabirintoAtt {
+
+    // Cores ANSI
+    static final String RESET = "\u001B[0m";
+    static final String VERMELHO = "\u001B[31m";
+    static final String VERDE = "\u001B[32m";
+    static final String AMARELO = "\u001B[33m";
+    static final String AZUL = "\u001B[34m";
+    static final String CIANO = "\u001B[36m";
+    static final String BRANCO = "\u001B[37m";
+
+    static final String FUNDO_PRETO = "\u001B[40m";
+    static final String FUNDO_BRANCO = "\u001B[47m";
+
+    public static void main(String[] args) {
+        Scanner entrada = new Scanner(System.in);
+        
+        // Definindo o Tamanho da Matriz
+
+        int tamanhoCelulas = 9;
+        char[][] mapa = gerarLabirinto(tamanhoCelulas);
+        
+        // Definindo onde fica o Inicio, e a preferencia do S (Saída).
+
+        int inicioLinha = 1, inicioColuna = 1;
+        int saidaLinha = mapa.length - 2, saidaColuna = mapa[0].length - 2;
+
+        int jogadorLinha = inicioLinha, jogadorColuna = inicioColuna;
+        
+        // Definindo onde fica o começo e o fim (localização).
+
+        mapa[inicioLinha][inicioColuna] = 'J';
+        mapa[saidaLinha][saidaColuna] = 'S';
+
+        while (true) {
+            limparTela();
+            exibirMapa(mapa);
+            
+            // Verifica a Saída
+
+            if (jogadorLinha == saidaLinha && jogadorColuna == saidaColuna) {
+                System.out.println(VERDE + "VOCE CHEGOU A SAIDA! PARABENS!" + RESET);
+                break;
+            }
+            
+            // Movimentação do J
+
+            System.out.print("Mover (W/A/S/D) | Sair (Q): ");
+            String comando = entrada.nextLine().trim().toUpperCase();
+            if (comando.isEmpty()) continue;
+
+            char tecla = comando.charAt(0);
+            if (tecla == 'Q') break;
+
+            int novaLinha = jogadorLinha;
+            int novaColuna = jogadorColuna;
+
+            if (tecla == 'W') novaLinha--;
+            else if (tecla == 'S') novaLinha++;
+            else if (tecla == 'A') novaColuna--;
+            else if (tecla == 'D') novaColuna++;
+            else continue;
+
+            if (novaLinha < 0 || novaLinha >= mapa.length ||
+                novaColuna < 0 || novaColuna >= mapa[0].length) {
+                continue;
+            }
+
+            if (mapa[novaLinha][novaColuna] == '#') {
+                continue;
+            }
+
+            mapa[jogadorLinha][jogadorColuna] = ' ';
+            jogadorLinha = novaLinha;
+            jogadorColuna = novaColuna;
+            mapa[jogadorLinha][jogadorColuna] = 'J';
+        }
+
+        entrada.close();
+    }
+    
+    // Sensação de Atualização "60 FPS"
+
+    static void limparTela() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+        
+    }
+     
+    // Geração do Labirinto
+
+    static char[][] gerarLabirinto(int celulas) {
+        
+        // Tamanho do Mapa
+        int linhas = celulas * 2 + 1;
+        int colunas = celulas * 2 + 1;
+        
+        // Criando a Matriz do Labirinto
+
+        char[][] mapa = new char[linhas][colunas];
+        
+        // Preenchendo Tudo com Parede (Depois o Código vai "Cavar" DFS)                                                                                    
+
+        for (int l = 0; l < linhas; l++)
+            for (int c = 0; c < colunas; c++)
+                mapa[l][c] = '#';
+        
+        // Criando a Matriz para Marcar Células Visitadas
+
+        boolean[][] visitado = new boolean[celulas][celulas];
+        
+        // Declarando o .Random
+        
+        Random aleatorio = new Random();
+        
+        // Pilha!
+        //A pilha guarda o caminho que você está percorrendo, Permite o Famoso BACKTRACKING!
+        // TRAVOU?, Volte pra onde vc consegue Continuar.
+        
+        Deque<int[]> pilha = new ArrayDeque<>();
+        
+        // Começar no Canto Superior
+        // Começamos no [0],[0]
+        // Marcamos como Visitada
+        // Colocamos na Pilha para Mostrar que "Estamos Aqui".
+
+        int linhaAtual = 0, colunaAtual = 0;
+        visitado[linhaAtual][colunaAtual] = true;
+        pilha.push(new int[]{linhaAtual, colunaAtual});
+        
+        // Abrir a Célula no Mapa Final
+        // O mapa é maior que isso (Corredores), por isso * 2 + 1!
+
+        mapa[linhaAtual * 2 + 1][colunaAtual * 2 + 1] = ' ';
+        
+        
+        // WHILE
+        // Enquanto tiver pilha, tem camihho pra explorar!
+        while (!pilha.isEmpty()) {
+            
+            // Pegar o Topo da Pilha
+            // peek(), ver onde vc está, sem tirar da pilha
+            
+            int[] atual = pilha.peek();
+            int l = atual[0], c = atual[1];
+            
+            // Procurar Vizinhos ainda não Visitados!
+
+            List<int[]> vizinhos = new ArrayList<>();
+            
+            // Isso cria uma lista com todos os vizinhos disponíveis.
+            // Se não tiver nenhum → travou → BACKTRACK.
+
+            if (l > 0 && !visitado[l - 1][c]) vizinhos.add(new int[]{l - 1, c});
+            if (l < celulas - 1 && !visitado[l + 1][c]) vizinhos.add(new int[]{l + 1, c});
+            if (c > 0 && !visitado[l][c - 1]) vizinhos.add(new int[]{l, c - 1});
+            if (c < celulas - 1 && !visitado[l][c + 1]) vizinhos.add(new int[]{l, c + 1});
+            
+            // Se Tiver Vizinhos Livres, Escolher um Aleatório
+
+            if (!vizinhos.isEmpty()) {
+                int[] prox = vizinhos.get(aleatorio.nextInt(vizinhos.size()));
+                int nl = prox[0], nc = prox[1];
+                
+                // Marcar como Visitado
+                
+                visitado[nl][nc] = true;
+                
+                // Quebrar a Parede Entre os Dois!
+                // Se você tá em (l, c) e vai para (nl, nc),existe uma parede entre elas.
+                // Essa parede está exatamente no meio.
+
+
+                int paredeLinha = l + nl + 1;
+                int paredeColuna = c + nc + 1;
+
+                mapa[paredeLinha][paredeColuna] = ' ';
+                mapa[nl * 2 + 1][nc * 2 + 1] = ' ';
+                
+                // Empurrar a nova célula na Pilha
+                // "Agora estou nessa nova Célula."
+
+                pilha.push(new int[]{nl, nc});
+                
+                // Se não tiver Vizinhos...
+                // Isso Tira a Célula da Pilha e Volta para a anterior.
+                //BACKTRACKING!
+            } else {
+                pilha.pop();
+            }
+        }
+
+        return mapa;
+    }
+
+    static void exibirMapa(char[][] mapa) {
+        for (int l = 0; l < mapa.length; l++) {
+            for (int c = 0; c < mapa[l].length; c++) {
+
+                char p = mapa[l][c];
+
+                if (p == '#') {
+                    System.out.print(FUNDO_PRETO + BRANCO + "# " + RESET);
+                } else if (p == 'J') {
+                    System.out.print(AZUL + "J " + RESET);
+                } else if (p == 'S') {
+                    System.out.print(VERDE + "S " + RESET);
+                } else {
+                    System.out.print(FUNDO_BRANCO + "  " + RESET);
+                }
+
+            }
+            System.out.println();
+        }
+    }
+}
